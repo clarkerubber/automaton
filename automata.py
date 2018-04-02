@@ -16,9 +16,8 @@ class World(object):
 			self.grid = np.random.randint(particles, size=self.dimensions)
 		else:
 			os.exit('invalid seed argument')
-		self.grid = np.zeros(self.dimensions)
 		self.mapping = {}
-		[[self.mapping.update({j: randint(0, particles-1)}) for j in permutations(i)] for i in combinations_with_replacement(range(particles), 2*len(dimensions))] # [(state of adjacent nodes, new state of central square)]
+		[[self.mapping.update({(j,)+i: randint(0, particles-1)}) for j in range(particles)] for i in combinations_with_replacement(range(particles), 2*len(dimensions))] # [(state of adjacent nodes, new state of central square)]
 
 	def next(self, *kwargs): # calculate the next state of the world and return it
 		next_grid = np.copy(self.grid)
@@ -43,7 +42,7 @@ class World(object):
 		return tuple(pos)
 
 	def neighbors(self, pos):
-		n = []
+		n = [self.grid[pos]]
 		for i in range(len(pos)):
 			_pos = list(pos)
 			
@@ -58,15 +57,14 @@ class World(object):
 				n.append(self.grid[tuple(_pos)])
 			else:
 				n.append(0)
-		return tuple(n)
+		return tuple([int(i) for i in sorted(n)])
 
-particles = 3
-world = World(dimensions=(150, 150), particles=particles, seed='zeros')
+particles = 4
+world = World(dimensions=(150, 150), particles=particles)
 
 fig, ax = plt.subplots()
 
 pprint(world.mapping) # the rules of the world
 
 ani = animation.FuncAnimation(fig, func=world.animate, interval=500)
-
 plt.show()
