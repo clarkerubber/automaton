@@ -9,9 +9,6 @@ import argparse
 
 parser = argparse.ArgumentParser(description=__doc__)
 
-parser.add_argument("--dimensions", "-d", dest="dimensions",
-                    default=(101,101), nargs='+', type=int, help="size of the world grid")
-
 parser.add_argument("--particles", "-p", dest="particles",
                     default=2, type=int, help="how many states can each grid occupy")
 
@@ -19,17 +16,30 @@ parser.add_argument("--seed", "-s", dest="seed",
                     default='one', type=str, help="how should the world be initialised")
 
 parser.add_argument("--asymmetric", "-a", dest="asymmetric",
-                    default=False, const=True, type=bool, nargs='?', help="should the rules be symmetric")
+                    default=False, const=True, type=bool, nargs='?', help="should the rules be asymmetric")
+
+parser.add_argument("--conway", dest="conway",
+                    default=False, const=True, type=bool, nargs='?', help="should the rules be conway's game of life")
+
+parser.add_argument("--time", "-t", dest="time",
+					default=50, type=int, help="how many frames should the animation be run for")
+
+parser.add_argument("--dimensions", "-d", dest="dimensions",
+                    default=(101,101), nargs='+', type=int, help="size of the world grid")
 
 settings = parser.parse_args()
 
 class World(object):
-	def __init__(self, dimensions, particles, seed='one', symmetric=True):
+	def __init__(self, dimensions, particles, seed='one', symmetric=True, duration=50, conway=False):
 		self.dimensions = dimensions # (x, y, z)
-		self.seed = seed
 		self.particles = particles # amount of types of partile in the world
-		self.grid = World.create_grid(self.dimensions, self.particles, self.seed)
+		self.seed = seed
+		self.symmetric = symmetric
+		self.duration = duration
+		self.conway = conway
 		self.epoch = 0
+
+		self.grid = World.create_grid(self.dimensions, self.particles, self.seed)
 
 		self.locations = []
 		pos = [0 for i in range(len(self.dimensions))]
@@ -44,7 +54,6 @@ class World(object):
 		self.neighbor_combinations = np.array(list(filter(lambda a: a != tuple([0 for i in self.dimensions]), list(set(self.neighbor_combinations)))))
 		pprint(self.neighbor_combinations)
 
-		self.symmetric = symmetric
 		self.mapping = self.create_mapping()
 
 	def update_pos(self, pos):
@@ -62,7 +71,7 @@ class World(object):
 	def animate(self, *args):
 		print(self.epoch)
 		self.epoch += 1
-		if self.epoch >= 75:
+		if self.epoch >= self.duration:
 			self.reset()
 		return plt.imshow(self.next()/(self.particles-1))
 
@@ -81,6 +90,27 @@ class World(object):
 
 	def create_mapping(self):
 		mapping = {}
+		if self.conway:
+			return {
+				(0,0,0,0,0,0,0,0,0): 0,
+				(0,0,0,0,0,0,0,0,1): 0,
+				(0,0,0,0,0,0,0,1,0): 0,
+				(0,0,0,0,0,0,0,1,1): 0,
+				(0,0,0,0,0,0,1,1,0): 0,
+				(0,0,0,0,0,0,1,1,1): 1,
+				(0,0,0,0,0,1,1,1,0): 1,
+				(0,0,0,0,0,1,1,1,1): 1,
+				(0,0,0,0,1,1,1,1,0): 0,
+				(0,0,0,0,1,1,1,1,1): 0,
+				(0,0,0,1,1,1,1,1,0): 0,
+				(0,0,0,1,1,1,1,1,1): 0,
+				(0,0,1,1,1,1,1,1,0): 0,
+				(0,0,1,1,1,1,1,1,1): 0,
+				(0,1,1,1,1,1,1,1,0): 0,
+				(0,1,1,1,1,1,1,1,1): 0,
+				(1,1,1,1,1,1,1,1,0): 0,
+				(1,1,1,1,1,1,1,1,1): 0,
+			}
 		if self.symmetric:
 			[[mapping.update({i+(j,): randint(0, self.particles-1)}) for j in range(self.particles)] for i in combinations_with_replacement(range(self.particles), len(self.neighbor_combinations))]
 			#pprint(list(mapping.keys()))
@@ -111,7 +141,13 @@ class World(object):
 		pprint(self.mapping)
 		self.epoch = 0
 
-world = World(dimensions=tuple(settings.dimensions), particles=settings.particles, seed=settings.seed, symmetric=(not settings.asymmetric))
+world = World(
+	dimensions=tuple(settings.dimensions),
+	particles=settings.particles,
+	seed=settings.seed,
+	symmetric=(not settings.asymmetric),
+	duration=settings.time,
+	conway=settings.conway)
 
 fig, ax = plt.subplots()
 
@@ -119,9 +155,3 @@ pprint(world.mapping) # the rules of the world
 
 ani = animation.FuncAnimation(fig, func=world.animate, interval=50)
 plt.show()
-"""
-conway = {
-	(0,0,0,0,0,0,0,0,0): 0,
-	(0,0,0,0,0,0,0,0,0): 
-
-}"""
